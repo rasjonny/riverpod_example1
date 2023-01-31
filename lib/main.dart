@@ -14,8 +14,27 @@ void main() {
   );
 }
 
-final dateAndTime = Provider(
-  (ref) => DateTime.now(),
+extension OptionalInfixAddition<T extends num> on T? {
+  T? operator +(T? other) {
+    final shadow = this;
+    if (shadow != null) {
+      return shadow + (other ?? 0) as T;
+    }
+    return null;
+  }
+}
+
+class Counter extends StateNotifier<int?> {
+  Counter() : super(null);
+  void increment() {
+    state = state == null ? 1 : state + 1;
+  }
+
+  int? get value => state;
+}
+
+final counterValue = StateNotifierProvider<Counter, int?>(
+  (ref) => Counter(),
 );
 
 class HomePage extends ConsumerWidget {
@@ -23,15 +42,24 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, ref) {
-    final date = ref.watch(dateAndTime);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('HomePage'),
-      ),
-      body: Center(
-        child: Text(
-          date.toIso8601String(),
+        title: Consumer(
+          builder: (context, ref, child) {
+            final count = ref.watch(counterValue);
+            final value = count == null ? 'press the button' : count.toString();
+            return Text(value);
+          },
         ),
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextButton(
+            onPressed: ref.read(counterValue.notifier).increment,
+            child: const Text('Increment Counter'),
+          ),
+        ],
       ),
     );
   }
