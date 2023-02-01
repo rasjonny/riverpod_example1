@@ -14,53 +14,75 @@ void main() {
   );
 }
 
-extension OptionalInfixAddition<T extends num> on T? {
-  T? operator +(T? other) {
-    final shadow = this;
-    if (shadow != null) {
-      return shadow + (other ?? 0) as T;
-    }
-    return null;
-  }
+enum City {
+  naz,
+  assel,
+  addis,
 }
 
-class Counter extends StateNotifier<int?> {
-  Counter() : super(null);
-  void increment() {
-    state = state == null ? 1 : state + 1;
-  }
+typedef WeatherEmoji = String;
 
-  int? get value => state;
+Future<WeatherEmoji> getWeather(City city) {
+  return Future.delayed(const Duration(seconds: 1), () {
+    return {
+          City.addis: '🌧',
+          City.naz: '☀',
+          City.assel: '💨',
+        }[city] ??
+        'unknown';
+  });
 }
 
-final counterValue = StateNotifierProvider<Counter, int?>(
-  (ref) => Counter(),
-);
+final currentCityProvider = StateProvider<City?>((ref) => null);
+final weatherProvider = FutureProvider<WeatherEmoji>((ref) {
+  final city = ref.watch(currentCityProvider);
+  if (city != null) {
+    return getWeather(city);
+  }
+  return '🤷‍♂️';
+});
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context, ref) {
+    final cityWeather = ref.watch(weatherProvider);
     return Scaffold(
-      appBar: AppBar(
-        title: Consumer(
-          builder: (context, ref, child) {
-            final count = ref.watch(counterValue);
-            final value = count == null ? 'press the button' : count.toString();
-            return Text(value);
-          },
-        ),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextButton(
-            onPressed: ref.read(counterValue.notifier).increment,
-            child: const Text('Increment Counter'),
+      appBar: AppBar(title: const Text('Weather')),
+      body: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        cityWeather.when(
+          data: (data) => Text(
+            data,
+            style: const TextStyle(fontSize: 40),
           ),
-        ],
-      ),
+          error: (_, __) => const Text('ERRoR'),
+          loading: () => const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: CircularProgressIndicator(),
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ListView.builder(
+              itemCount: City.values.length,
+              itemBuilder: (context, index) {
+                final city = City.values[index];
+                final isSelected = city == ref.watch(currentCityProvider);
+                return ListTile(
+                    title: Text(
+                      city.name,
+                    ),
+                    trailing: isSelected ? const Icon(Icons.check) : null,
+                    onTap: () {
+                      ref.read(currentCityProvider.notifier).state = city;
+                    });
+              },
+            ),
+          ),
+        ),
+      ]),
     );
   }
 }
