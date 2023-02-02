@@ -14,75 +14,51 @@ void main() {
   );
 }
 
-enum City {
-  naz,
-  assel,
-  addis,
-}
-
-typedef WeatherEmoji = String;
-
-Future<WeatherEmoji> getWeather(City city) {
-  return Future.delayed(const Duration(seconds: 1), () {
-    return {
-          City.addis: '🌧',
-          City.naz: '☀',
-          City.assel: '💨',
-        }[city] ??
-        'unknown';
-  });
-}
-
-final currentCityProvider = StateProvider<City?>((ref) => null);
-final weatherProvider = FutureProvider<WeatherEmoji>((ref) {
-  final city = ref.watch(currentCityProvider);
-  if (city != null) {
-    return getWeather(city);
-  }
-  return '🤷‍♂️';
-});
+final tickerProvider = StreamProvider(
+  (ref) => Stream.periodic(
+      const Duration(
+        seconds: 1,
+      ),
+      (i) => i + 1),
+);
+final nameProvider = StreamProvider(
+  (ref) => ref.watch(tickerProvider.stream).map(
+        (count) => names.getRange(0, count),
+      ),
+);
+const names = [
+  'abe',
+  'kebe',
+  'lema',
+  'tedi',
+  'sol',
+  'mane',
+  'jo',
+  'kira',
+];
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context, ref) {
-    final cityWeather = ref.watch(weatherProvider);
+    final names = ref.watch(nameProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Weather')),
-      body: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        cityWeather.when(
-          data: (data) => Text(
-            data,
-            style: const TextStyle(fontSize: 40),
-          ),
-          error: (_, __) => const Text('ERRoR'),
-          loading: () => const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: CircularProgressIndicator(),
-          ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
+        appBar: AppBar(title: const Text('Weather')),
+        body: names.when(data: (name) {
+          return Expanded(
             child: ListView.builder(
-              itemCount: City.values.length,
-              itemBuilder: (context, index) {
-                final city = City.values[index];
-                final isSelected = city == ref.watch(currentCityProvider);
-                return ListTile(
-                    title: Text(
-                      city.name,
-                    ),
-                    trailing: isSelected ? const Icon(Icons.check) : null,
-                    onTap: () {
-                      ref.read(currentCityProvider.notifier).state = city;
-                    });
-              },
-            ),
-          ),
-        ),
-      ]),
-    );
+                itemCount: name.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(name.elementAt(index)),
+                  );
+                }),
+          );
+        }, error: (_, __) {
+          return const Text('reached end of list');
+        }, loading: () {
+          return const CircularProgressIndicator();
+        }));
   }
 }
